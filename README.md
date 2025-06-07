@@ -15,3 +15,6 @@ Featuring emerging and established artists pushing the limits of abstract expres
 Immersive exhibitions and installations that challenge perception and invite contemplation.
 
 "Art is not what you see, but what you make others see." — Edgar Degas
+
+### Audio Narration
+Each artwork slide can play an accompanying MP3. Place your audio files in `assets/audio/` and they will be triggered by the play button beneath each artwork.
