@@ -1470,6 +1470,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let inactivityTimer;
   let currentSlide = 0;
   showSlide(currentSlide);
+  const maxDrag = window.innerHeight * 0.5;
 
   // Deep-link handling (?art=slug)
   (function handleDeepLink() {
@@ -1580,7 +1581,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let isDragging = false;
   let startY = 0;
   let currentY = 0;
-  const maxDrag = window.innerHeight * 0.5;
 
   gsap.to(hero, { duration: 0.8, opacity: 1, ease: 'power2.out' });
   gsap.to(heroSpotlight, {
