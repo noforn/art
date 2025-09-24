@@ -710,6 +710,31 @@
       display: inline-flex;
     }
 
+    .share-toast {
+      position: fixed;
+      bottom: 12vh;
+      left: 50%;
+      transform: translate(-50%, 0);
+      background: rgba(23, 23, 23, 0.95);
+      color: #ececec;
+      border: 1px solid #36383a;
+      padding: 0.65rem 1.4rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      letter-spacing: 0.03em;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 2003;
+    }
+
+    .share-toast.show {
+      opacity: 1;
+      transform: translate(-50%, -8px);
+    }
+
     @media (min-width: 768px) {
       .mobile-share-btn {
         display: none !important;
@@ -1840,6 +1865,10 @@ function showSlide(index) {
         img.setAttribute('loading', 'eager');
       }
     });
+
+    if (shareBtn) {
+      shareBtn.classList.remove('visible');
+    }
 }
 
   closeGalleryBtn.addEventListener('click', () => {
@@ -1946,6 +1975,8 @@ function showSlide(index) {
 
 // Mobile share button helpers
 let shareBtn = null;
+let shareToast = null;
+let shareToastTimer = null;
 
 function slugify(text) {
   return (text || '')
@@ -1968,6 +1999,12 @@ function ensureShareButton() {
     shareBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       handleShare();
+    });
+    shareBtn.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+    });
+    shareBtn.addEventListener('touchend', (e) => {
+      e.stopPropagation();
     });
   }
 }
@@ -2005,36 +2042,66 @@ function updateShareButtonVisibility() {
   }
 }
 
-function handleShare() {
+function ensureShareToast() {
+  if (!shareToast) {
+    shareToast = document.createElement('div');
+    shareToast.className = 'share-toast';
+    document.body.appendChild(shareToast);
+  }
+  return shareToast;
+}
+
+function showShareFeedback(message) {
+  const toast = ensureShareToast();
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(shareToastTimer);
+  shareToastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2000);
+}
+
+function fallbackCopyToClipboard(text) {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.setAttribute('readonly', '');
+  textArea.style.position = 'fixed';
+  textArea.style.top = '-1000px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  const successful = document.execCommand('copy');
+  document.body.removeChild(textArea);
+  if (!successful) {
+    throw new Error('Copy command was unsuccessful');
+  }
+}
+
+async function handleShare() {
   const fullScreenSlide = document.querySelector('.slide.full-screen');
   if (!fullScreenSlide) return;
-  const img = fullScreenSlide.querySelector('img');
   const titleEl = fullScreenSlide.querySelector('.art-title');
   const title = titleEl ? titleEl.textContent.trim() : 'Artwork';
   const slug = slugify(title);
-  const imageUrl = new URL(img.getAttribute('src'), window.location.origin).href;
   const deepLink = new URL(window.location.pathname + '?art=' + encodeURIComponent(slug), window.location.origin).href;
 
-  const shareData = {
-    title: `${title} — Suzanne O\'Shea`,
-    text: `View on website: ${deepLink}`,
-    url: imageUrl
+  const copySucceeded = () => {
+    showShareFeedback('Link copied to clipboard');
   };
 
-  if (navigator.share) {
-    navigator.share(shareData).catch(() => {
-      try {
-        navigator.clipboard.writeText(deepLink);
-        alert('Link copied to clipboard');
-      } catch (e) {
-        prompt('Copy this link:', deepLink);
-      }
-    });
-  } else {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(deepLink);
+      copySucceeded();
+    } else {
+      fallbackCopyToClipboard(deepLink);
+      copySucceeded();
+    }
+  } catch (err) {
     try {
-      navigator.clipboard.writeText(deepLink);
-      alert('Link copied to clipboard');
-    } catch (e) {
+      fallbackCopyToClipboard(deepLink);
+      copySucceeded();
+    } catch (fallbackErr) {
       prompt('Copy this link:', deepLink);
     }
   }
@@ -2237,9 +2304,13 @@ document.addEventListener('DOMContentLoaded', () => {
   
   document.addEventListener('click', (e) => {
     const fullScreenSlide = document.querySelector('.slide.full-screen');
-    if (fullScreenSlide && !e.target.closest('.zoom-container img')) {
-      toggleFullScreen(fullScreenSlide);
-      updateShareButtonVisibility();
+    if (fullScreenSlide) {
+      const clickedZoomContainer = e.target.closest('.zoom-container');
+      const clickedShareButton = e.target.closest('.mobile-share-btn');
+      if (!clickedZoomContainer && !clickedShareButton) {
+        toggleFullScreen(fullScreenSlide);
+        updateShareButtonVisibility();
+      }
     }
   });
 
@@ -2285,13 +2356,15 @@ function toggleFullScreen(slide) {
         onComplete: () => {
           slide.classList.remove('full-screen', 'animating');
           document.body.classList.remove('full-screen-active');
-          
+
           img.style.transform = '';
           img.style.width = '';
           img.style.height = '';
           img.style.boxShadow = '';
           img.style.borderRadius = '';
-          
+
+          updateShareButtonVisibility();
+
           setTimeout(() => {
             img.classList.remove('zoom-transition');
           }, 100);
