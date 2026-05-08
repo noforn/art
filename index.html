@@ -1588,34 +1588,15 @@
 
         const title = s.querySelector('.art-title')?.textContent?.trim() || 'Artwork';
         const imageEl = s.querySelector('img');
-        const link = new URL(window.location.pathname + '?art=' + encodeURIComponent(slugify(title)), window.location.origin).href;
+        const imageSrc = imageEl?.currentSrc || imageEl?.src;
+        const link = imageSrc ? new URL(imageSrc, window.location.origin).href : window.location.href;
 
         try {
           if (navigator.share) {
             const shareData = {
               title,
-              text: title,
               url: link
             };
-
-            const imageSrc = imageEl?.currentSrc || imageEl?.src;
-            if (imageSrc && navigator.canShare) {
-              try {
-                const resp = await fetch(imageSrc, { mode: 'cors' });
-                if (resp.ok) {
-                  const blob = await resp.blob();
-                  const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
-                  const safeName = slugify(title) || 'artwork';
-                  const file = new File([blob], `${safeName}.${ext}`, { type: blob.type || 'image/jpeg' });
-
-                  if (navigator.canShare({ files: [file] })) {
-                    shareData.files = [file];
-                  }
-                }
-              } catch (_) {
-                // Ignore image-fetch errors and fall back to URL-only share.
-              }
-            }
 
             await navigator.share(shareData);
             showShareFeedback('Artwork shared');
