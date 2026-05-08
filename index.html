@@ -745,6 +745,11 @@
       opacity: 0;
       animation: fadeIn 0.5s 0.3s forwards;
     }
+
+    .mobile-share-btn { position: absolute; right: 14px; bottom: 14px; z-index: 25; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #f4f4f4; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .25s ease, transform .25s ease; }
+    .mobile-share-btn.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .share-toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(12px); background: rgba(0,0,0,.75); color: #fff; font-size: 12px; padding: 8px 12px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 2000; }
+    .share-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 
@@ -1379,10 +1384,12 @@
               img.setAttribute('loading', 'eager');
             }
           });
+          hideShareButton();
         }
 
         closeGalleryBtn.addEventListener('click', () => {
           hideTapIndicators();
+          hideShareButton();
           gsap.to(galleryScreen, {
             opacity: 0,
             duration: 0.3,
@@ -1435,6 +1442,7 @@
           hideTapIndicators();
           const bottomThreshold = window.innerHeight - 60;
           if (e.clientY > bottomThreshold) {
+            hideShareButton();
             gsap.to(galleryScreen, {
               y: '100%',
               opacity: 0,
@@ -1463,6 +1471,7 @@
             const fullScreenSlide = document.querySelector('.slide.full-screen');
             if (fullScreenSlide) {
               toggleFullScreen(fullScreenSlide);
+              updateShareButtonVisibility();
             }
           } else if (e.key === 'ArrowRight') {
             if (nextBtn) nextBtn.click();
@@ -1486,6 +1495,38 @@
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/(^-|-$)/g, '');
+      }
+
+      let shareBtn = null, shareToast = null, shareToastTimer = null, shareBtnShowTimer = null;
+      const clearShareButtonShowTimer = () => { if (shareBtnShowTimer) { clearTimeout(shareBtnShowTimer); shareBtnShowTimer = null; } };
+      const hideShareButton = () => { clearShareButtonShowTimer(); if (shareBtn) shareBtn.classList.remove('visible'); };
+      function ensureShareButton() {
+        if (shareBtn) return;
+        shareBtn = document.createElement('button');
+        shareBtn.type = 'button';
+        shareBtn.className = 'mobile-share-btn';
+        shareBtn.setAttribute('aria-label', 'Share this artwork');
+        shareBtn.textContent = 'Share';
+        shareBtn.addEventListener('click', async (e) => { e.stopPropagation(); await handleShare(); });
+      }
+      function attachShareButtonTo(slide) { ensureShareButton(); const z = slide.querySelector('.zoom-container'); if (z && shareBtn.parentElement !== z) z.appendChild(shareBtn); }
+      function getIsZoomed(img) { const t = window.getComputedStyle(img).transform; return t && t !== 'none' && t !== 'matrix(1, 0, 0, 1, 0, 0)'; }
+      function updateShareButtonVisibility() {
+        if (!shareBtn) return; if (window.innerWidth >= 768) return hideShareButton();
+        const s = document.querySelector('.slide.full-screen'); if (!s) return hideShareButton();
+        if (getIsZoomed(s.querySelector('img'))) return hideShareButton();
+        if (shareBtn.classList.contains('visible')) return clearShareButtonShowTimer();
+        if (!shareBtnShowTimer) shareBtnShowTimer = setTimeout(() => { shareBtn.classList.add('visible'); shareBtnShowTimer = null; }, 3000);
+      }
+      function showShareFeedback(message) {
+        if (!shareToast) { shareToast = document.createElement('div'); shareToast.className = 'share-toast'; document.body.appendChild(shareToast); }
+        shareToast.textContent = message; shareToast.classList.add('show'); clearTimeout(shareToastTimer); shareToastTimer = setTimeout(() => shareToast.classList.remove('show'), 2000);
+      }
+      async function handleShare() {
+        const s = document.querySelector('.slide.full-screen'); if (!s) return;
+        const title = s.querySelector('.art-title')?.textContent?.trim() || 'Artwork';
+        const link = new URL(window.location.pathname + '?art=' + encodeURIComponent(slugify(title)), window.location.origin).href;
+        await navigator.clipboard.writeText(link); showShareFeedback('Link copied to clipboard');
       }
 
       if (window.innerWidth < 768) {
@@ -1524,6 +1565,7 @@
             translateX = 0;
             translateY = 0;
             img.style.transform = 'scale(1)';
+            updateShareButtonVisibility();
           });
 
           img.parentElement.addEventListener('touchstart', (e) => {
@@ -1539,11 +1581,13 @@
               startScale = scale;
               touchCenter = getTouchCenter(e.touches[0], e.touches[1], img);
               img.style.transformOrigin = `${touchCenter.x}% ${touchCenter.y}%`;
+              updateShareButtonVisibility();
             } else if (e.touches.length === 1 && (scale > 1 || isFullscreen)) {
               e.preventDefault();
               isPanning = true;
               lastTouchX = e.touches[0].clientX;
               lastTouchY = e.touches[0].clientY;
+              updateShareButtonVisibility();
             }
           });
 
@@ -1594,6 +1638,7 @@
               img.style.transform = 'scale(1)';
               img.dataset.scale = '1';
               img.style.transformOrigin = 'center center';
+              updateShareButtonVisibility();
               setTimeout(() => {
                 img.style.transition = '';
               }, 300);
@@ -1714,6 +1759,7 @@
         slide.classList.add('animating');
 
         if (slide.classList.contains('full-screen')) {
+          hideShareButton();
 
           const currentTransform = window.getComputedStyle(img).transform;
           img.classList.add('zoom-transition');
@@ -1743,6 +1789,7 @@
               onComplete: () => {
                 slide.classList.remove('full-screen', 'animating');
                 document.body.classList.remove('full-screen-active');
+                hideShareButton();
 
                 img.style.transform = '';
                 img.style.width = '';
@@ -1801,6 +1848,8 @@
 
               slide.classList.add('full-screen');
               document.body.classList.add('full-screen-active');
+              attachShareButtonTo(slide);
+              updateShareButtonVisibility();
 
               tl.to(img, {
                 width: targetWidth + 'px',
