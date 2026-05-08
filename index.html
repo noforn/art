@@ -1589,19 +1589,15 @@
         const title = s.querySelector('.art-title')?.textContent?.trim() || 'Artwork';
         const artworkSlug = slugify(title);
 
-        const imageEl = s.querySelector('.zoom-container img');
-        const imageSrc = imageEl?.getAttribute('src');
-        if (!imageSrc) return;
-
-        const imageUrl = new URL(imageSrc, window.location.origin);
-        imageUrl.hash = artworkSlug;
+        const shareUrl = new URL(window.location.href);
+        shareUrl.searchParams.set('art', artworkSlug);
+        shareUrl.hash = '';
 
         try {
           if (navigator.share) {
             const shareData = {
               title,
-              text: title,
-              url: imageUrl.href
+              url: shareUrl.href
             };
 
             await navigator.share(shareData);
@@ -1612,8 +1608,7 @@
           if (err && err.name === 'AbortError') return;
         }
 
-        await navigator.clipboard.writeText(`${title}
-${imageUrl.href}`);
+        await navigator.clipboard.writeText(shareUrl.href);
         showShareFeedback('Link copied to clipboard');
       }
 
