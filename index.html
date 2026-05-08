@@ -1583,10 +1583,50 @@
         shareToast.textContent = message; shareToast.classList.add('show'); clearTimeout(shareToastTimer); shareToastTimer = setTimeout(() => shareToast.classList.remove('show'), 2000);
       }
       async function handleShare() {
-        const s = document.querySelector('.slide.full-screen'); if (!s) return;
+        const s = document.querySelector('.slide.full-screen');
+        if (!s) return;
+
         const title = s.querySelector('.art-title')?.textContent?.trim() || 'Artwork';
+        const imageEl = s.querySelector('img');
         const link = new URL(window.location.pathname + '?art=' + encodeURIComponent(slugify(title)), window.location.origin).href;
-        await navigator.clipboard.writeText(link); showShareFeedback('Link copied to clipboard');
+
+        try {
+          if (navigator.share) {
+            const shareData = {
+              title,
+              text: title,
+              url: link
+            };
+
+            const imageSrc = imageEl?.currentSrc || imageEl?.src;
+            if (imageSrc && navigator.canShare) {
+              try {
+                const resp = await fetch(imageSrc, { mode: 'cors' });
+                if (resp.ok) {
+                  const blob = await resp.blob();
+                  const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+                  const safeName = slugify(title) || 'artwork';
+                  const file = new File([blob], `${safeName}.${ext}`, { type: blob.type || 'image/jpeg' });
+
+                  if (navigator.canShare({ files: [file] })) {
+                    shareData.files = [file];
+                  }
+                }
+              } catch (_) {
+                // Ignore image-fetch errors and fall back to URL-only share.
+              }
+            }
+
+            await navigator.share(shareData);
+            showShareFeedback('Artwork shared');
+            return;
+          }
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+        }
+
+        await navigator.clipboard.writeText(link);
+        showShareFeedback('Link copied to clipboard');
       }
 
       if (window.innerWidth < 768) {
