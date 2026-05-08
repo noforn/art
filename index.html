@@ -1588,15 +1588,20 @@
 
         const title = s.querySelector('.art-title')?.textContent?.trim() || 'Artwork';
         const artworkSlug = slugify(title);
-        const shareUrl = new URL(window.location.href);
-        shareUrl.searchParams.set('art', artworkSlug);
+
+        const imageEl = s.querySelector('.zoom-container img');
+        const imageSrc = imageEl?.getAttribute('src');
+        if (!imageSrc) return;
+
+        const imageUrl = new URL(imageSrc, window.location.origin);
+        imageUrl.hash = artworkSlug;
 
         try {
           if (navigator.share) {
             const shareData = {
-              title: 'Virtual Exhibition',
-              text: 'Virtual Exhibition',
-              url: shareUrl.href
+              title,
+              text: title,
+              url: imageUrl.href
             };
 
             await navigator.share(shareData);
@@ -1607,7 +1612,8 @@
           if (err && err.name === 'AbortError') return;
         }
 
-        await navigator.clipboard.writeText(shareUrl.href);
+        await navigator.clipboard.writeText(`${title}
+${imageUrl.href}`);
         showShareFeedback('Link copied to clipboard');
       }
 
