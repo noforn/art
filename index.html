@@ -762,15 +762,12 @@
   <div class="content">
     <div class="watermark">SO</div>
 
-    <div class="shh-intro" id="shhIntro" aria-hidden="true">Shh...</div>
-
     <main class="hero">
       <div class="hero-spotlight"></div>
-      <h1>You're Invited</h1>
-      <div class="virtual-exhibition">Private Exhibition</div>
-      <div class="artist-name">Suzanne O'Shea</div>
+      <h1>Suzanne O'Shea</h1>
+      <div class="virtual-exhibition">Virtual Exhibition</div>
       <button class="enter-exhibit-btn" id="enterExhibitBtn" type="button">
-        Preview
+        Explore
       </button>
     </main>
   </div>
@@ -971,11 +968,9 @@
         const hero = document.querySelector('.hero');
         const heroSpotlight = document.querySelector('.hero-spotlight');
         const subHeading = document.querySelector('.virtual-exhibition');
-        const artistLine = document.querySelector('.artist-name');
         const galleryScreen = document.getElementById('galleryScreen');
         const closeGalleryBtn = document.getElementById('closeGalleryBtn');
 
-        const shhIntro = document.getElementById('shhIntro');
         let deepLinked = false;
 
         const prevBtn = document.getElementById('prevBtn');
@@ -1110,19 +1105,13 @@
           gsap.to(subHeading, {
             duration: 1.2,
             opacity: 1,
-            delay: 1.5,
-            ease: 'power2.out',
-          });
-          gsap.to(artistLine, {
-            duration: 1.2,
-            opacity: 1,
-            delay: 2.1,
+            delay: 0.5,
             ease: 'power2.out',
           });
           gsap.to(enterExhibitBtn, {
             duration: 1.2,
             opacity: 1,
-            delay: 2.5,
+            delay: 0.9,
             ease: 'power2.out',
           });
 
@@ -1143,32 +1132,6 @@
           });
         }
 
-        function playShhIntroThenHero() {
-          if (!shhIntro) {
-            startHeroAnimations();
-            return;
-          }
-
-          gsap.set(shhIntro, { opacity: 0, y: 0, filter: 'blur(6px)', scale: 0.98 });
-          const tl = gsap.timeline();
-          tl.to(shhIntro, {
-            opacity: 1,
-            filter: 'blur(0px)',
-            duration: 0.8,
-            ease: 'power3.out'
-          })
-            .to(shhIntro, { duration: 0.6 })
-            .to(shhIntro, {
-              opacity: 0,
-              y: -10,
-              duration: 0.8,
-              ease: 'power2.inOut'
-            })
-            .add(() => {
-              if (shhIntro) shhIntro.style.display = 'none';
-              startHeroAnimations();
-            });
-        }
 
         document.addEventListener('mousemove', (e) => {
           const centerX = window.innerWidth / 2;
@@ -1194,7 +1157,7 @@
         document.addEventListener('touchend', handleEnd);
 
         if (!deepLinked) {
-          playShhIntroThenHero();
+          startHeroAnimations();
         }
 
         function handleStart(e) {
