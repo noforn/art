@@ -1587,15 +1587,16 @@
         if (!s) return;
 
         const title = s.querySelector('.art-title')?.textContent?.trim() || 'Artwork';
-        const imageEl = s.querySelector('img');
-        const imageSrc = imageEl?.currentSrc || imageEl?.src;
-        const link = imageSrc ? new URL(imageSrc, window.location.origin).href : window.location.href;
+        const artworkSlug = slugify(title);
+        const shareUrl = new URL(window.location.href);
+        shareUrl.searchParams.set('art', artworkSlug);
 
         try {
           if (navigator.share) {
             const shareData = {
               title,
-              url: link
+              text: title,
+              url: shareUrl.href
             };
 
             await navigator.share(shareData);
@@ -1606,7 +1607,7 @@
           if (err && err.name === 'AbortError') return;
         }
 
-        await navigator.clipboard.writeText(link);
+        await navigator.clipboard.writeText(shareUrl.href);
         showShareFeedback('Link copied to clipboard');
       }
 
